@@ -1,4 +1,8 @@
-from abc import ABC, abstractmethod
+from abc import ABC
+
 
 class BaseDataView(ABC):
-    pass
+
+    def __init__(self):
+        pass
+    

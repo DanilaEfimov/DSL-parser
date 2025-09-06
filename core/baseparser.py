@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from basedataview import BaseDataView
 from dslentities.basetrigger import BaseTrigger
 
+
 class BaseParser(ABC):
 
     def __init__(self):

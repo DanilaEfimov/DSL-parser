@@ -1,4 +1,5 @@
-from dslentities.basemetadata import BaseMetaData
+from core.dslentities.basemetadata import BaseMetaData
+
 
 class ByteMetaData(BaseMetaData):
 

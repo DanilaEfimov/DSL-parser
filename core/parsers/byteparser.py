@@ -1,4 +1,5 @@
-from baseparser import BaseParser
+from core.baseparser import BaseParser
+
 
 class ByteParser(BaseParser):
 

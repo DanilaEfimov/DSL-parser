@@ -1,4 +1,5 @@
-from dataviews.basedataview import BaseDataView
+from core.basedataview import BaseDataView
+
 
 class JsonView(BaseDataView):
 
