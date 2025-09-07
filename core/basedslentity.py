@@ -1,7 +1,12 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 
 
 class BaseDslEntity(ABC):
-
-    def __init__(self):
+    @abstractmethod
+    def __len__(self) -> int:
         pass
+
+    @abstractmethod
+    def get_value(self):
+        pass
+    

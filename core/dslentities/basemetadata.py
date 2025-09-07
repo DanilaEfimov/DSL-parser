@@ -1,7 +1,14 @@
-from abc import ABC
+from abc import abstractmethod
+from typing import Any
+
+from core.basedslentity import BaseDslEntity
 
 
-class BaseMetaData(ABC):
+class BaseMetaData(BaseDslEntity):
+    def __init__(self, value: Any, size: int):
+        self.value = value
+        self.size = size
 
-    def __init__(self):
-        pass
+    @abstractmethod
+    def __len__(self):
+        return self.size

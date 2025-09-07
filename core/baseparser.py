@@ -11,7 +11,7 @@ from core.dslentities.basetrigger import BaseTrigger
 Frame of parsing input:
 vvv <---------  0 cursor position
 meta_i | meta_i-1 | ... | meta_1 | ***
-***: callbacks -- vvv -- ... --------------- vvv
+***: callbacks -- vvv -- ... ----------------- vvv
 raw_data_1 | trigger_1 | ... | raw_data_i | trigger_i
 """
 
@@ -37,7 +37,7 @@ class BaseParser(ABC):
         pass
 
     @abstractmethod
-    def process(self, data, *, start: int = 0) -> BaseDataView:
+    def process(self, data: Any, *, start: int = 0) -> BaseDataView:
         """
         while cursor < len(input data)
         iterative cycle: check -> process
@@ -59,12 +59,14 @@ class BaseParser(ABC):
     def get_cursor(self) -> int:
         return self._cursor
 
-    def peek(self, inputted):
-        if self._cursor + 1 >= len(inputted):
+    def peek(self, inputted, offset: int=0):
+        pos: int = self._cursor + offset
+        if pos >= len(inputted):
             raise IndexError(f"BaseParser.peek: cursor out of range "
                              f"[current position: {self._cursor}; "
+                             f"offset: {offset}; "
                              f"len of inputted data: {len(inputted)}]")
-        return inputted[self._cursor + 1]
+        return inputted[pos]
 
     def add_trigger(self, trigger: BaseTrigger):
         """
@@ -87,7 +89,7 @@ class BaseParser(ABC):
         return self._metadata
 
     @abstractmethod
-    def check_trigger(self, data) -> None | BaseTrigger:
+    def check_trigger(self, data: Any) -> None | BaseTrigger:
         """
         this function check any matches with triggers
         at current cursor position (if such exists)
@@ -96,4 +98,14 @@ class BaseParser(ABC):
         trigger patterns; Else BaseTrigger, which
         was matched
         """
+        pass
+
+    def minimum_size(self) -> int:
+        min_size: int = 0
+        for field in self._metadata:
+            min_size += len(field)
+        return min_size
+
+    @abstractmethod
+    def _triggers_are_prefix_free(self) -> bool:
         pass
