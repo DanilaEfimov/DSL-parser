@@ -1,39 +1,99 @@
 from abc import ABC, abstractmethod
+from collections.abc import Callable
+from typing import Any
 
 from basedataview import BaseDataView
-from dslentities.basetrigger import BaseTrigger
+from core.dslentities.basemetadata import BaseMetaData
+from core.dslentities.basetrigger import BaseTrigger
+
+
+"""
+Frame of parsing input:
+vvv <---------  0 cursor position
+meta_i | meta_i-1 | ... | meta_1 | ***
+***: callbacks -- vvv -- ... --------------- vvv
+raw_data_1 | trigger_1 | ... | raw_data_i | trigger_i
+"""
+
+CallbackType = Callable[[Any, int], int]
+# Callback function signature:
+# - accepts: (data: Any, current_cursor_pos: int)
+# - returns: int (new cursor position; typically current_cursor_pos + 1)
 
 
 class BaseParser(ABC):
-
-    def __init__(self):
+    def __init__(self, name: str):
+        self.name: str = name
         self._cursor: int = 0
-        self._triggers: list[BaseTrigger] = []
+        self._callbacks: dict[BaseTrigger, CallbackType] = {}
+        self._metadata: list[BaseMetaData] = []
 
     @abstractmethod
-    def process(self, data, *,
-                start:int=0) -> BaseDataView:
+    def description(self) -> str:
         """
-        must be overloaded
-        :param data: it can be text or byte array
-        :param start: integer point, where parser start to processing
-        :return: object as BaseDataView oriented class
+        :return: description, hints about this
+        format
+        """
+        pass
+
+    @abstractmethod
+    def process(self, data, *, start: int = 0) -> BaseDataView:
+        """
+        while cursor < len(input data)
+        iterative cycle: check -> process
+        (at process step non explicitly _cursor moving)
+        :param data: a text/bytes/.. input
+        :param start: start cursor position
+        :return: parsed object view
+        """
+        pass
+
+    @abstractmethod
+    def reset(self) -> None:
+        """
+        returns non running parser state
+        cursor = 0 ect.
         """
         pass
 
     def get_cursor(self) -> int:
         return self._cursor
 
-    @abstractmethod
-    def peek(self) -> str:
+    def peek(self, inputted):
+        if self._cursor + 1 >= len(inputted):
+            raise IndexError(f"BaseParser.peek: cursor out of range "
+                             f"[current position: {self._cursor}; "
+                             f"len of inputted data: {len(inputted)}]")
+        return inputted[self._cursor + 1]
+
+    def add_trigger(self, trigger: BaseTrigger):
         """
-        :return: next char for cursor
+        bind trigger and callback action to parse
+        :param trigger: a text/bytes/.. trigger to action
+        :return: Callable
+        """
+        def callback(func: CallbackType):
+            self._callbacks[trigger] = func
+            return func
+        return callback
+
+    def get_triggers(self) -> dict[BaseTrigger, CallbackType]:
+        return self._callbacks
+
+    def add_metadata(self, data: BaseMetaData) -> None:
+        self._metadata.append(data)
+
+    def get_metadata(self) -> list[BaseMetaData]:
+        return self._metadata
+
+    @abstractmethod
+    def check_trigger(self, data) -> None | BaseTrigger:
+        """
+        this function check any matches with triggers
+        at current cursor position (if such exists)
+        :param data: a text/bytes/.. input
+        :return: None if we haven't any
+        trigger patterns; Else BaseTrigger, which
+        was matched
         """
         pass
-
-    def add_trigger(self, trigger: BaseTrigger) -> None:
-        self._triggers.append(trigger)
-
-    def get_triggers(self) -> list[BaseTrigger]:
-        return self._triggers
-    
