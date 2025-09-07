@@ -26,6 +26,7 @@ class BaseParser(ABC):
     def __init__(self, name: str):
         self.name: str = name
         self._cursor: int = 0
+        self._cursor_stack: list[int] = [0]
         self._callbacks: dict[BaseTrigger, CallbackType] = {}
         self._metadata: list[BaseMetaData] = []
         self._meta_reader: CallbackType = CallbackType()
@@ -121,3 +122,17 @@ class BaseParser(ABC):
     @abstractmethod
     def _triggers_are_prefix_free(self) -> bool:
         pass
+
+    # cursor stack can be used by callbacks
+    def push_cursor(self) -> None:
+        self._cursor_stack.append(self._cursor)
+
+    def pop_cursor(self) -> None:
+        if not len(self._cursor_stack):
+            raise IndexError("BaseParser.pop_cursor: _cursor_stack is empty")
+        self._cursor_stack.pop()
+
+    def top_cursor(self) -> int:
+        if not len(self._cursor_stack):
+            raise IndexError("BaseParser.top_cursor: _cursor_stack is empty")
+        return self._cursor_stack[-1]
