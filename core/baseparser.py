@@ -1,46 +1,71 @@
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from typing import Any
 
-from basedataview import BaseDataView
+from core.basedataview import BaseDataView
 from core.dslentities.basemetadata import BaseMetaData
 from core.dslentities.basetrigger import BaseTrigger
 from core.dslentities.baseparsemodel import BaseParseModel
 
 
-"""
-Frame of parsing input:
-vvv <---------  0 cursor position
-meta_i | meta_i-1 | ... | meta_1 | ***
-***: callbacks -- vvv -- ... ----------------- vvv
-raw_data_1 | trigger_1 | ... | raw_data_i | trigger_i
-"""
-
 CallbackType = Callable[[BaseParseModel, int], int]
-# Callback function signature:
-# - accepts: (data: BaseParseModel, current_cursor_pos: int)
-# - returns: int (new cursor position; typically current_cursor_pos + 1)
 
 
 class BaseParser(ABC):
+    """
+    Abstract base class for input data parsers with cursor-based state and trigger-based parsing logic.
+
+    This class defines a generic parsing interface for reading structured data from
+    raw inputs (bytes, strings, etc.) using a trigger system and callback mechanisms.
+
+    Parsing architecture:
+       Cursor points to the current position in the input stream.
+       Metadata fields are parsed first; triggers and raw data follow.
+
+       Example:
+           vvv <---------  0 cursor position
+           meta_i | meta_i-1 | ... | meta_1 | ***
+           ***: callbacks -- vvv -- ... ----------------- vvv
+           raw_data_1 | trigger_1 | ... | raw_data_i | trigger_i
+
+    Core components:
+    - _cursor: current parsing position
+    - _callbacks: trigger -> callback mapping
+    - _metadata: list of required metadata fields
+    - _cursor_stack: for backtracking support
+
+    To use this class, subclass it and implement:
+    - description()
+    - process()
+    - reset()
+    - check_trigger()
+    - _triggers_are_prefix_free()
+
+    Typical usage involves binding triggers with `add_trigger()`, binding a meta-reader
+    with `set_meta_reader()`, and calling `process()` with input data.
+
+    Note:
+       Callback signatures must match: (data: BaseParseModel, cursor: int) -> int
+    """
+
     def __init__(self, name: str):
         self.name: str = name
         self._cursor: int = 0
-        self._cursor_stack: list[int] = [0]
+        self._cursor_stack: list[int] = [self._cursor] # for backtracking e.g.
         self._callbacks: dict[BaseTrigger, CallbackType] = {}
         self._metadata: list[BaseMetaData] = []
         self._meta_reader: CallbackType = CallbackType()
 
+    @staticmethod
     @abstractmethod
-    def description(self) -> str:
+    def description() -> str:
         """
         :return: description, hints about this
-        format
+        format parser class
         """
         pass
 
     @abstractmethod
-    def process(self, data: Any, *, start: int = 0) -> BaseDataView:
+    def process(self, data: BaseParseModel, *, start: int = 0) -> BaseDataView:
         """
         while cursor < len(input data)
         iterative cycle: check -> process
@@ -102,7 +127,7 @@ class BaseParser(ABC):
         return self._metadata
 
     @abstractmethod
-    def check_trigger(self, data: Any) -> None | BaseTrigger:
+    def check_trigger(self, data: BaseParseModel) -> None | BaseTrigger:
         """
         this function check any matches with triggers
         at current cursor position (if such exists)
@@ -136,3 +161,8 @@ class BaseParser(ABC):
         if not len(self._cursor_stack):
             raise IndexError("BaseParser.top_cursor: _cursor_stack is empty")
         return self._cursor_stack[-1]
+
+
+
+if __name__ == "__main__":
+    help(BaseParser)
