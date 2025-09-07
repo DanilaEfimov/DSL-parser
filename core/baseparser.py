@@ -5,6 +5,7 @@ from typing import Any
 from basedataview import BaseDataView
 from core.dslentities.basemetadata import BaseMetaData
 from core.dslentities.basetrigger import BaseTrigger
+from core.dslentities.baseparsemodel import BaseParseModel
 
 
 """
@@ -15,9 +16,9 @@ meta_i | meta_i-1 | ... | meta_1 | ***
 raw_data_1 | trigger_1 | ... | raw_data_i | trigger_i
 """
 
-CallbackType = Callable[[Any, int], int]
+CallbackType = Callable[[BaseParseModel, int], int]
 # Callback function signature:
-# - accepts: (data: Any, current_cursor_pos: int)
+# - accepts: (data: BaseParseModel, current_cursor_pos: int)
 # - returns: int (new cursor position; typically current_cursor_pos + 1)
 
 
@@ -27,6 +28,7 @@ class BaseParser(ABC):
         self._cursor: int = 0
         self._callbacks: dict[BaseTrigger, CallbackType] = {}
         self._metadata: list[BaseMetaData] = []
+        self._meta_reader: CallbackType = CallbackType()
 
     @abstractmethod
     def description(self) -> str:
@@ -76,6 +78,16 @@ class BaseParser(ABC):
         """
         def callback(func: CallbackType):
             self._callbacks[trigger] = func
+            return func
+        return callback
+
+    def set_meta_reader(self):
+        """
+        bind metadata sequence and callback action to read
+        :return: Callable
+        """
+        def callback(func: CallbackType):
+            self._meta_reader = func
             return func
         return callback
 
